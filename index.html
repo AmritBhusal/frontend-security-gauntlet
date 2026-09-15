@@ -368,22 +368,22 @@ const QUESTIONS = [
   {
     zone:"client", tag:"01 · XSS & SAME-ORIGIN",
     q:"XSS needs two things to go wrong at the same time. Which pair?",
-    options:["The page takes text from an outside source, and shows it without cleaning it first","The server is slow, and the user picked a weak password","The site is on HTTP, and the user is on public WiFi","The page loads too many scripts, and one of them fails"],
-    correct:0,
+    options:["The server is slow, and the user picked a weak password","The site is on HTTP, and the user is on public WiFi","The page takes text from an outside source, and shows it without cleaning it first","The page loads too many scripts, and one of them fails"],
+    correct:2,
     explain:"Outside text plus no sanitizing. Once both are true, the attacker's code runs as if your own site wrote it — reading everything on the page and sending requests as the logged-in user."
   },
   {
     zone:"client", tag:"02 · REACT & ESCAPING",
     q:"React's JSX escapes the values you insert. Where does that protection stop?",
-    options:["Nowhere — JSX covers every case","Escaping is contextual: attributes, scripts and styles each follow their own rules","Only in development builds","Only when the value is a number"],
-    correct:1,
+    options:["Escaping is contextual: attributes, scripts and styles each follow their own rules","Nowhere — JSX covers every case","Only when the value is a number","Only in development builds"],
+    correct:0,
     explain:"JSX covers plain text well. Other contexts have their own rules — an unquoted attribute can still run code like onmouseover=alert(1) even when quoting is handled correctly everywhere else."
   },
   {
     zone:"client", tag:"03 · SANITIZING HTML",
     q:"You genuinely need to render raw HTML that came from a user. What do you reach for?",
-    options:["A regex that strips out <script> tags","A vetted sanitizer like DOMPurify","Nothing — React handles it","Base64-encode the string first"],
-    correct:1,
+    options:["A regex that strips out <script> tags","Nothing — React handles it","Base64-encode the string first","A vetted sanitizer like DOMPurify"],
+    correct:3,
     explain:"Homemade cleaners always miss a case. Sanitize by default with a vetted library, and keep CSP as the backup layer rather than the main defense."
   },
   {
@@ -396,29 +396,29 @@ const QUESTIONS = [
   {
     zone:"client", tag:"05 · CSP — ALLOWLIST VS STRICT",
     q:"Why is an allowlist CSP (listing approved domains) a poor bet?",
-    options:["It is hard to maintain and breaks the moment a third-party script changes something","Browsers quietly ignore allowlists","It only works over HTTP","It noticeably slows the page down"],
-    correct:0,
+    options:["Browsers quietly ignore allowlists","It only works over HTTP","It is hard to maintain and breaks the moment a third-party script changes something","It noticeably slows the page down"],
+    correct:2,
     explain:"A strict CSP built on nonces or hashes holds up better, and it also blocks inline event handlers, eval(), object embeds and <base> tag hijacking."
   },
   {
     zone:"client", tag:"06 · CSP — ROLLOUT",
     q:"What is the first step when rolling out a strict CSP?",
-    options:["Turn it on in production and see what breaks","Ship it as Content-Security-Policy-Report-Only first","Add 'unsafe-inline' so nothing breaks","Remove every third-party script"],
-    correct:1,
+    options:["Turn it on in production and see what breaks","Add 'unsafe-inline' so nothing breaks","Remove every third-party script","Ship it as Content-Security-Policy-Report-Only first"],
+    correct:3,
     explain:"Report-Only shows what the policy would block without breaking anything. Then pick nonces or hashes, enforce for real, add strict-dynamic where scripts load scripts, and fix the inline handlers it flags."
   },
   {
     zone:"client", tag:"07 · CSP — WHAT TO AVOID",
     q:"Which of these should never appear in your CSP?",
-    options:["A per-request nonce","'unsafe-inline'","'strict-dynamic'","default-src https:"],
-    correct:1,
+    options:["'unsafe-inline'","A per-request nonce","default-src https:","'strict-dynamic'"],
+    correct:0,
     explain:"'unsafe-inline', data: URIs in script-src, and wildcard sources all give the policy away. default-src https: is a reasonable fallback when a strict policy is not realistic yet."
   },
   {
     zone:"client", tag:"08 · SECRETS IN SHIPPED CODE",
     q:"Your JS bundle is public. Which of these counts as information leakage?",
-    options:["Only hardcoded passwords","Hardcoded credentials, weakly scoped API keys, and internal admin routes","Only the source map file","Nothing — the bundle is minified"],
-    correct:1,
+    options:["Only hardcoded passwords","Only the source map file","Hardcoded credentials, weakly scoped API keys, and internal admin routes","Nothing — the bundle is minified"],
+    correct:2,
     explain:"Anything reachable in shipped code is a free map handed to attackers. Grep production JS for secrets regularly, and make sure any exposed key is restricted by IP, referrer or API."
   },
   {
@@ -431,8 +431,8 @@ const QUESTIONS = [
   {
     zone:"both", tag:"10 · CSRF",
     q:"An attacker's page makes your logged-in user's browser send a real request your user never intended. What stops it?",
-    options:["CSRF tokens plus SameSite cookies","A stricter CSP","A correct CORS header","Minifying the bundle"],
-    correct:0,
+    options:["A stricter CSP","A correct CORS header","Minifying the bundle","CSRF tokens plus SameSite cookies"],
+    correct:3,
     explain:"CSRF rides the session the user already has. A token proves the request came from your own page, and SameSite stops the cookie tagging along in the first place."
   },
   {
@@ -445,22 +445,22 @@ const QUESTIONS = [
   {
     zone:"both", tag:"12 · CLIENT-SIDE AUTHORIZATION",
     q:"The Delete button is hidden for users without permission. Is the action protected?",
-    options:["Yes — they cannot see it","No — hiding a button is UI convenience; the server has to recheck","Yes, as long as the route is hidden too","Yes, as long as the site is on HTTPS"],
-    correct:1,
+    options:["No — hiding a button is UI convenience; the server has to recheck","Yes — they cannot see it","Yes, as long as the route is hidden too","Yes, as long as the site is on HTTPS"],
+    correct:0,
     explain:"Client-side authorization is a convenience, not a boundary. Anyone can call the endpoint directly, so permissions get rechecked on the server every time."
   },
   {
     zone:"server", tag:"13 · CORS",
     q:"Which CORS setup is the dangerous one?",
-    options:["A wildcard * combined with credentials","A single trusted origin","Your own origin only","Blocking all cross-origin reads"],
-    correct:0,
+    options:["A single trusted origin","Your own origin only","A wildcard * combined with credentials","Blocking all cross-origin reads"],
+    correct:2,
     explain:"A misconfigured header lets any site read data meant only for yours. Allow only trusted origins, and never mix a wildcard with credentials."
   },
   {
     zone:"server", tag:"14 · URL MANIPULATION",
     q:"A user edits an ID in the URL and sees someone else's data. Where is the bug?",
-    options:["In the frontend router","The backend never rechecked permissions for that record","In the CORS header","The ID should have been encrypted"],
-    correct:1,
+    options:["In the frontend router","In the CORS header","The ID should have been encrypted","The backend never rechecked permissions for that record"],
+    correct:3,
     explain:"The ID came from the user, so it cannot be trusted. The server has to confirm this user is allowed to reach that specific record."
   },
   {
@@ -473,8 +473,8 @@ const QUESTIONS = [
   {
     zone:"both", tag:"16 · SUPPLY CHAIN",
     q:"Most of a modern frontend is code you did not write. How does risk get in?",
-    options:["Compromised packages, typosquatted names, and transitive dependencies you never chose","Only through packages you installed directly","Only through dev dependencies","It does not — the registry reviews everything"],
-    correct:0,
+    options:["Only through packages you installed directly","Compromised packages, typosquatted names, and transitive dependencies you never chose","Only through dev dependencies","It does not — the registry reviews everything"],
+    correct:1,
     explain:"Dependency code runs with exactly the same trust as your own. Pin versions, use lockfiles, scan in CI, and keep the dependency list as small as the task allows."
   },
 ];
@@ -509,6 +509,14 @@ function showScreen(id){
 /* ---------- room API ---------- */
 // The round clock is the server's, so compare against its stamp, not this device's.
 function serverNow(){ return Date.now() + clockSkew; }
+
+// Answering never reveals anything — the whole room flips together, either when
+// the host hits Reveal or when the 20s clock runs out for everyone.
+function roundRevealed(){
+  if(!S) return false;
+  if(S.revealed || S.phase === 'results') return true;
+  return !!S.startedAt && (serverNow() - S.startedAt) >= ROUND_SECONDS*1000;
+}
 
 function showErr(msg){
   ['qrErr','joinErr','admErr'].forEach((id)=>{
@@ -644,7 +652,7 @@ function buildQuestion(q){
 function paintQuiz(q){
   const live = !!S.startedAt;
   const answered = myChoice !== null && myChoice !== undefined;
-  const reveal = answered || !!S.revealed;
+  const reveal = roundRevealed();
 
   $('scoreVal').textContent = (me && me.score) || 0;
   const streak = (me && me.streak) || 0;
@@ -652,7 +660,7 @@ function paintQuiz(q){
   $('streakVal').textContent = streak;
 
   Array.from(document.querySelectorAll('.opt')).forEach((b,i)=>{
-    b.disabled = !live || reveal;
+    b.disabled = !live || answered || reveal;
     b.classList.toggle('picked', !reveal && i === myChoice);
     b.classList.toggle('correct', reveal && i === q.correct);
     b.classList.toggle('wrong', reveal && i === myChoice && myChoice !== q.correct);
@@ -672,7 +680,8 @@ function paintQuiz(q){
   const sb = $('standby');
   sb.hidden = false;
   if(!live){ sb.textContent = 'Waiting for the host to start this round…'; sb.className = 'standby live'; }
-  else if(reveal){ sb.textContent = 'Locked in. Waiting for the host to move on…'; sb.className = 'standby'; }
+  else if(reveal){ sb.textContent = 'Round over. Waiting for the host to move on…'; sb.className = 'standby'; }
+  else if(answered){ sb.textContent = 'Locked in. Waiting for the rest of the room…'; sb.className = 'standby live'; }
   else { sb.hidden = true; }
 }
 
@@ -793,8 +802,12 @@ function renderAdmin(){
   $('admPlayers').textContent = players.length;
 
   if(document.activeElement !== $('qPicker')) $('qPicker').value = String(S.index);
+  // The host console gets projected, so the answer stays hidden until the reveal too.
+  const shown = roundRevealed();
   $('admQ').textContent = q.q;
-  $('admA').textContent = 'Answer: ' + LETTERS[q.correct] + ' — ' + q.options[q.correct];
+  $('admA').textContent = shown
+    ? 'Answer: ' + LETTERS[q.correct] + ' — ' + q.options[q.correct]
+    : 'Answer hidden until the round is revealed';
 
   const last = S.index >= QUESTIONS.length - 1;
   $('startBtn').textContent = S.phase !== 'question' ? 'Start round 1'
@@ -808,7 +821,7 @@ function renderAdmin(){
   const counts = q.options.map((_, i)=> answers.filter(a=>a.choice === i).length);
   const max = Math.max(1, ...counts);
   $('admTally').innerHTML = q.options.map((opt,i)=>
-    `<div class="tally-row${i===q.correct?' is-correct':''}">`
+    `<div class="tally-row${shown && i===q.correct?' is-correct':''}">`
     + `<span class="k">${LETTERS[i]}</span>`
     + `<span class="bar"><i style="width:${(counts[i]/max)*100}%"></i></span>`
     + `<span class="n">${counts[i]}</span></div>`).join('');

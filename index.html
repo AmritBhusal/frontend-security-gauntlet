@@ -331,15 +331,11 @@
           <div class="admin-q" id="admQ">&mdash;</div>
           <div class="admin-a" id="admA">&mdash;</div>
           <div class="btn-row">
-            <button class="btn-sm go" id="startBtn">Start round</button>
+            <button class="btn-sm go" id="startBtn">Start round 1</button>
             <button class="btn-sm" id="revealBtn">Reveal answer</button>
           </div>
           <div class="btn-row">
             <button class="btn-sm" id="prevBtn">&larr; Previous</button>
-            <button class="btn-sm" id="nextBtn">Next &rarr;</button>
-          </div>
-          <div class="btn-row">
-            <button class="btn-sm" id="resultsBtn">Show final results</button>
             <button class="btn-sm" id="lobbyBtn">Back to lobby</button>
           </div>
           <div class="btn-row">
@@ -370,102 +366,116 @@
 
 const QUESTIONS = [
   {
-    zone:"client", tag:"01 · XSS",
-    q:"Someone posts a comment containing malicious code on a website. Every visitor who later views that comment ends up running the code automatically. What is this attack called?",
-    options:["Reflected XSS","Stored XSS","CSRF","Clickjacking"],
-    correct:1,
-    explain:"The malicious code is saved on the server and shown to everyone who visits the page — that's what makes it 'stored' XSS."
+    zone:"client", tag:"01 · XSS & SAME-ORIGIN",
+    q:"XSS needs two things to go wrong at the same time. Which pair?",
+    options:["The page takes text from an outside source, and shows it without cleaning it first","The server is slow, and the user picked a weak password","The site is on HTTP, and the user is on public WiFi","The page loads too many scripts, and one of them fails"],
+    correct:0,
+    explain:"Outside text plus no sanitizing. Once both are true, the attacker's code runs as if your own site wrote it — reading everything on the page and sending requests as the logged-in user."
   },
   {
     zone:"client", tag:"02 · REACT & ESCAPING",
-    q:"A developer uses a special method to inject raw HTML from user content directly into a React page, skipping React's normal safety checks. What risk does this create?",
-    options:["No risk — React always protects you","It can allow an XSS attack","It causes a CORS error","It just makes the page load slower"],
+    q:"React's JSX escapes the values you insert. Where does that protection stop?",
+    options:["Nowhere — JSX covers every case","Escaping is contextual: attributes, scripts and styles each follow their own rules","Only in development builds","Only when the value is a number"],
     correct:1,
-    explain:"React only auto-escapes normal text. This method bypasses that protection, so any malicious HTML runs as real code."
+    explain:"JSX covers plain text well. Other contexts have their own rules — an unquoted attribute can still run code like onmouseover=alert(1) even when quoting is handled correctly everywhere else."
   },
   {
-    zone:"client", tag:"03 · CONTENT SECURITY POLICY",
-    q:"Which setting basically cancels out a Content Security Policy, letting any inline script run anyway?",
-    options:["'self'","'unsafe-inline'","a nonce","'strict-dynamic'"],
+    zone:"client", tag:"03 · SANITIZING HTML",
+    q:"You genuinely need to render raw HTML that came from a user. What do you reach for?",
+    options:["A regex that strips out <script> tags","A vetted sanitizer like DOMPurify","Nothing — React handles it","Base64-encode the string first"],
     correct:1,
-    explain:"'unsafe-inline' allows any inline script to run, which defeats the entire point of having a policy."
+    explain:"Homemade cleaners always miss a case. Sanitize by default with a vetted library, and keep CSP as the backup layer rather than the main defense."
   },
   {
-    zone:"client", tag:"04 · SECRETS IN CODE",
-    q:"A private API key was accidentally included in a website's public JavaScript file. What should the team do first?",
-    options:["Minify the code more","Just rename the variable","Immediately revoke or rotate the key","Delete the file from GitHub"],
-    correct:2,
-    explain:"Once a secret has shipped to the browser, assume it's already been seen. The only real fix is revoking it and issuing a new one."
-  },
-  {
-    zone:"both", tag:"05 · AUTHENTICATION VS AUTHORIZATION",
-    q:"Checking whether a logged-in user is allowed to delete a specific file they own is an example of:",
-    options:["Authentication","Authorization","CORS","Encryption"],
+    zone:"client", tag:"04 · CSP — WHAT IT'S FOR",
+    q:"What is a Content Security Policy actually for?",
+    options:["Preventing every XSS bug from ever existing","Limiting the damage if XSS does get through","Encrypting traffic between browser and server","Checking who the user is"],
     correct:1,
-    explain:"Authentication confirms who you are. Authorization checks what you're allowed to do — this is authorization."
+    explain:"CSP tells the browser which code is allowed to run. It caps the blast radius — it does not replace sanitizing your input."
   },
   {
-    zone:"server", tag:"06 · IDOR",
-    q:"A user changes a number in a website's URL and suddenly sees someone else's private order details. What is this called?",
-    options:["Cross-Site Scripting (XSS)","Insecure Direct Object Reference (IDOR)","Clickjacking","A CORS error"],
-    correct:1,
-    explain:"The server trusted an ID from the URL without checking if this user was actually allowed to see that record — that's IDOR."
-  },
-  {
-    zone:"client", tag:"07 · TOKEN STORAGE",
-    q:"Where is it safer to store a login token so malicious JavaScript can't easily steal it?",
-    options:["In localStorage","In an HttpOnly cookie","In a regular (non-HttpOnly) cookie","In the page's URL"],
-    correct:1,
-    explain:"An HttpOnly cookie can't be read by JavaScript at all, so even a successful XSS attack can't grab it."
-  },
-  {
-    zone:"client", tag:"08 · CORS",
-    q:"CORS rules that control which websites can read your API's response are enforced by:",
-    options:["Your server","The browser","The database","The user's antivirus software"],
-    correct:1,
-    explain:"CORS is a browser-only protection. A tool like Postman or curl calling your API directly ignores it completely."
-  },
-  {
-    zone:"both", tag:"09 · OPEN REDIRECTS",
-    q:"A login page has a link like /login?redirect=https://fake-site.com. Why is this risky?",
-    options:["It can send users to a phishing site right after they log in","It automatically steals passwords by itself","It causes a CORS error","It's a type of SQL injection"],
+    zone:"client", tag:"05 · CSP — ALLOWLIST VS STRICT",
+    q:"Why is an allowlist CSP (listing approved domains) a poor bet?",
+    options:["It is hard to maintain and breaks the moment a third-party script changes something","Browsers quietly ignore allowlists","It only works over HTTP","It noticeably slows the page down"],
     correct:0,
-    explain:"An unchecked redirect turns your trusted login page into the first step of a phishing attack."
+    explain:"A strict CSP built on nonces or hashes holds up better, and it also blocks inline event handlers, eval(), object embeds and <base> tag hijacking."
   },
   {
-    zone:"both", tag:"10 · CLICKJACKING",
-    q:"An attacker places an invisible button over a real 'Delete Account' button, so users click it without realizing. What is this attack called?",
-    options:["CSRF","Clickjacking","XSS","IDOR"],
+    zone:"client", tag:"06 · CSP — ROLLOUT",
+    q:"What is the first step when rolling out a strict CSP?",
+    options:["Turn it on in production and see what breaks","Ship it as Content-Security-Policy-Report-Only first","Add 'unsafe-inline' so nothing breaks","Remove every third-party script"],
     correct:1,
-    explain:"Clickjacking hides your real page inside an invisible frame so clicks land somewhere the user didn't intend."
+    explain:"Report-Only shows what the policy would block without breaking anything. Then pick nonces or hashes, enforce for real, add strict-dynamic where scripts load scripts, and fix the inline handlers it flags."
   },
   {
-    zone:"server", tag:"11 · GRAPHQL AUTHORIZATION",
-    q:"A GraphQL action to delete a user is hidden from the app's menus, but someone can still call it directly and it works. What's the real problem?",
-    options:["The menu needs a redesign","There's no permission check on the server for that action","The database is too slow","GraphQL is always insecure"],
+    zone:"client", tag:"07 · CSP — WHAT TO AVOID",
+    q:"Which of these should never appear in your CSP?",
+    options:["A per-request nonce","'unsafe-inline'","'strict-dynamic'","default-src https:"],
     correct:1,
-    explain:"Hiding an action in the UI is just design. Every action still needs its own permission check on the server."
+    explain:"'unsafe-inline', data: URIs in script-src, and wildcard sources all give the policy away. default-src https: is a reasonable fallback when a strict policy is not realistic yet."
   },
   {
-    zone:"both", tag:"12 · CLIENT-SIDE VALIDATION",
-    q:"A form blocks money transfers over $1,000 in the browser, but sending the request directly (bypassing the form) skips that limit. What's missing?",
-    options:["A prettier error message","The same limit enforced on the server too","A CAPTCHA","More JavaScript checks"],
+    zone:"client", tag:"08 · SECRETS IN SHIPPED CODE",
+    q:"Your JS bundle is public. Which of these counts as information leakage?",
+    options:["Only hardcoded passwords","Hardcoded credentials, weakly scoped API keys, and internal admin routes","Only the source map file","Nothing — the bundle is minified"],
     correct:1,
-    explain:"Browser validation is just for a smooth experience. Anything that protects money or data must be checked again on the server."
+    explain:"Anything reachable in shipped code is a free map handed to attackers. Grep production JS for secrets regularly, and make sure any exposed key is restricted by IP, referrer or API."
   },
   {
-    zone:"client", tag:"13 · SECURITY HEADERS",
-    q:"Which header helps force a website's traffic to always use secure HTTPS instead of HTTP?",
-    options:["Strict-Transport-Security","X-Content-Type-Options","Referrer-Policy","frame-ancestors"],
+    zone:"client", tag:"09 · SOURCE MAPS",
+    q:"Does minifying your JavaScript hide what is inside it?",
+    options:["Yes, minified code is unreadable","No — text and strings survive intact; only variable names shrink","Yes, as long as you also gzip it","Only when source maps are turned off"],
+    correct:1,
+    explain:"Minifying is not hiding. Check whether file.js.map is sitting next to file.js in production, and decide on purpose whether maps ship publicly or go privately to a tool like Sentry."
+  },
+  {
+    zone:"both", tag:"10 · CSRF",
+    q:"An attacker's page makes your logged-in user's browser send a real request your user never intended. What stops it?",
+    options:["CSRF tokens plus SameSite cookies","A stricter CSP","A correct CORS header","Minifying the bundle"],
     correct:0,
-    explain:"Strict-Transport-Security tells the browser to always connect over HTTPS, even if someone types a plain http:// link."
+    explain:"CSRF rides the session the user already has. A token proves the request came from your own page, and SameSite stops the cookie tagging along in the first place."
   },
   {
-    zone:"both", tag:"14 · SECURITY OBSERVABILITY",
-    q:"A security setting was broken for weeks and nobody noticed until real damage was done. What would have caught this sooner?",
-    options:["A stronger password policy","Monitoring and logging for security failures","A bigger server","More animations on the page"],
+    zone:"client", tag:"11 · TOKEN STORAGE",
+    q:"Where should an auth token live?",
+    options:["In localStorage, so your JS can read it","In an httpOnly cookie, so JS cannot read it at all","In sessionStorage","In the URL, so it survives a refresh"],
     correct:1,
-    explain:"Shipping a fix isn't the last step — watching for failures (like CSP reports or auth errors) is what catches problems before they spread."
+    explain:"localStorage is readable by any script on the page, which means XSS reads it too. Cookies can be locked down with httpOnly, Secure and SameSite — localStorage has none of those."
+  },
+  {
+    zone:"both", tag:"12 · CLIENT-SIDE AUTHORIZATION",
+    q:"The Delete button is hidden for users without permission. Is the action protected?",
+    options:["Yes — they cannot see it","No — hiding a button is UI convenience; the server has to recheck","Yes, as long as the route is hidden too","Yes, as long as the site is on HTTPS"],
+    correct:1,
+    explain:"Client-side authorization is a convenience, not a boundary. Anyone can call the endpoint directly, so permissions get rechecked on the server every time."
+  },
+  {
+    zone:"server", tag:"13 · CORS",
+    q:"Which CORS setup is the dangerous one?",
+    options:["A wildcard * combined with credentials","A single trusted origin","Your own origin only","Blocking all cross-origin reads"],
+    correct:0,
+    explain:"A misconfigured header lets any site read data meant only for yours. Allow only trusted origins, and never mix a wildcard with credentials."
+  },
+  {
+    zone:"server", tag:"14 · URL MANIPULATION",
+    q:"A user edits an ID in the URL and sees someone else's data. Where is the bug?",
+    options:["In the frontend router","The backend never rechecked permissions for that record","In the CORS header","The ID should have been encrypted"],
+    correct:1,
+    explain:"The ID came from the user, so it cannot be trusted. The server has to confirm this user is allowed to reach that specific record."
+  },
+  {
+    zone:"both", tag:"15 · OPEN REDIRECTS",
+    q:"Your login page accepts any URL in ?redirect=. What is the risk?",
+    options:["It can send users straight to a phishing page","It leaks the session cookie to the parameter","It breaks CORS","It makes the redirect slower"],
+    correct:0,
+    explain:"Only redirect to a trusted allowlist. Anything else turns your own login page into the first hop of a phishing chain."
+  },
+  {
+    zone:"both", tag:"16 · SUPPLY CHAIN",
+    q:"Most of a modern frontend is code you did not write. How does risk get in?",
+    options:["Compromised packages, typosquatted names, and transitive dependencies you never chose","Only through packages you installed directly","Only through dev dependencies","It does not — the registry reviews everything"],
+    correct:0,
+    explain:"Dependency code runs with exactly the same trust as your own. Pin versions, use lockfiles, scan in CI, and keep the dependency list as small as the task allows."
   },
 ];
 
@@ -786,7 +796,10 @@ function renderAdmin(){
   $('admQ').textContent = q.q;
   $('admA').textContent = 'Answer: ' + LETTERS[q.correct] + ' — ' + q.options[q.correct];
 
-  $('startBtn').textContent = live ? 'Restart round' : 'Start round';
+  const last = S.index >= QUESTIONS.length - 1;
+  $('startBtn').textContent = S.phase !== 'question' ? 'Start round 1'
+    : last ? 'Show final results' : 'Next question →';
+  $('prevBtn').disabled = S.phase !== 'question' || S.index === 0;
   $('revealBtn').disabled = !live || !!S.revealed;
 
   const answers = players.map(p=> p.answers ? p.answers[String(S.index)] : null).filter(Boolean);
@@ -806,10 +819,13 @@ function renderAdmin(){
 if(isAdmin){
   $('qPicker').addEventListener('change', (e)=> gotoIndex(parseInt(e.target.value, 10)));
   $('prevBtn').addEventListener('click', ()=> gotoIndex((S ? S.index : 0) - 1));
-  $('nextBtn').addEventListener('click', ()=> gotoIndex((S ? S.index : 0) + 1));
-  $('startBtn').addEventListener('click', ()=> writeState({ phase:'question', startedAt:'now', revealed:false }));
+  // One button runs the whole game: start, then advance, then finish.
+  $('startBtn').addEventListener('click', ()=>{
+    if(!S || S.phase !== 'question') return gotoIndex(0);
+    if(S.index >= QUESTIONS.length - 1) return writeState({ phase:'results', startedAt:null, revealed:true });
+    gotoIndex(S.index + 1);
+  });
   $('revealBtn').addEventListener('click', ()=> writeState({ revealed:true }));
-  $('resultsBtn').addEventListener('click', ()=> writeState({ phase:'results', startedAt:null, revealed:true }));
   $('lobbyBtn').addEventListener('click', ()=> writeState({ phase:'lobby', startedAt:null, revealed:false }));
   $('resetBtn').addEventListener('click', async ()=>{
     if(!confirm('Clear every player and score, and send everyone back to check-in?')) return;
@@ -824,9 +840,10 @@ if(isAdmin){
   });
 }
 
+// Moving to a question starts its clock — the host never starts a round twice.
 function gotoIndex(i){
   const next = Math.max(0, Math.min(QUESTIONS.length - 1, i));
-  writeState({ phase:'question', index: next, startedAt:null, revealed:false });
+  writeState({ phase:'question', index: next, startedAt:'now', revealed:false });
 }
 
 boot();

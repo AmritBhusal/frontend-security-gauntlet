@@ -4,91 +4,91 @@
     "tag": "01 · XSS & SAME-ORIGIN",
     "q": "XSS needs two things to go wrong at the same time. Which pair?",
     "options": [
-      "The server is slow, and the user picked a weak password",
-      "The site is on HTTP, and the user is on public WiFi",
-      "The page takes text from an outside source, and shows it without cleaning it first",
-      "The page loads too many scripts, and one of them fails"
+      "The server responds slowly, and the user chose a weak password",
+      "The site runs over plain HTTP, and the user is on public WiFi",
+      "The page takes in text it did not write (user input, URL, API response), and puts it into the DOM without escaping or sanitizing it",
+      "The page loads many third-party scripts, and one of them fails to load"
     ],
     "correct": 2,
-    "explain": "Outside text plus no sanitizing. Once both are true, the attacker's code runs as if your own site wrote it — reading everything on the page and sending requests as the logged-in user."
+    "explain": "Untrusted text AND no escaping — both must be true. Untrusted text that gets escaped is harmless, and escaping only matters for text that came from outside. When both line up, the browser cannot tell the attacker's markup from yours: it runs on your origin, so it can read the page, read any cookie your JS can read, and send requests as the logged-in user. The other options are real problems (weak passwords, plain HTTP, a flaky CDN) but none of them put attacker text into your page."
   },
   {
     "zone": "client",
     "tag": "02 · REACT & ESCAPING",
     "q": "React's JSX escapes the values you insert. Where does that protection stop?",
     "options": [
-      "Escaping is contextual: attributes, scripts and styles each follow their own rules",
-      "Nowhere — JSX covers every case",
-      "Only when the value is a number",
-      "Only in development builds"
+      "It only covers values rendered as text. Values used as an attribute, a URL (href/src), an inline style, or passed to dangerouslySetInnerHTML are not made safe",
+      "It does not stop — JSX makes every value safe in every position",
+      "It stops for numbers; only strings get escaped",
+      "It only runs in development builds; production builds skip it for speed"
     ],
     "correct": 0,
-    "explain": "JSX covers plain text well. Other contexts have their own rules — an unquoted attribute can still run code like onmouseover=alert(1) even when quoting is handled correctly everywhere else."
+    "explain": "JSX escapes text nodes, so <p>{userInput}</p> is safe. It does not understand where the value lands: <a href={userInput}> still accepts \"javascript:alert(1)\", a style value can smuggle a url(), and dangerouslySetInnerHTML turns escaping off entirely — that is what the name is warning you about. Escaping is per-context: HTML text, HTML attribute, URL and CSS each have different rules, and one escaper cannot cover all four."
   },
   {
     "zone": "client",
     "tag": "03 · SANITIZING HTML",
     "q": "You genuinely need to render raw HTML that came from a user. What do you reach for?",
     "options": [
-      "A regex that strips out <script> tags",
-      "Nothing — React handles it",
-      "Base64-encode the string first",
-      "A vetted sanitizer like DOMPurify"
+      "A regex that strips <script> tags out of the string first",
+      "Nothing special — React escapes it for you, even inside dangerouslySetInnerHTML",
+      "Base64-encode the string and decode it in the browser",
+      "A maintained HTML sanitizer such as DOMPurify, run on the value before you render it"
     ],
     "correct": 3,
-    "explain": "Homemade cleaners always miss a case. Sanitize by default with a vetted library, and keep CSP as the backup layer rather than the main defense."
+    "explain": "Only a real HTML parser can decide what is safe, which is why you use a maintained sanitizer like DOMPurify instead of writing one. A regex loses immediately: <img src=x onerror=alert(1)> has no <script> tag to strip, and nested or malformed tags parse differently than the regex assumes. Base64 hides nothing — you decode it before rendering, so the payload still runs. And dangerouslySetInnerHTML is exactly the escape hatch out of React's escaping. Keep CSP as the second layer behind sanitizing, not as a replacement for it."
   },
   {
     "zone": "client",
     "tag": "04 · CSP — WHAT IT'S FOR",
     "q": "What is a Content Security Policy actually for?",
     "options": [
-      "Preventing every XSS bug from ever existing",
-      "Limiting the damage if XSS does get through",
-      "Encrypting traffic between browser and server",
-      "Checking who the user is"
+      "Stopping XSS bugs from being written into your code in the first place",
+      "Limiting what injected code can do when an XSS bug does get through",
+      "Encrypting traffic between the browser and the server",
+      "Checking who the user is before letting them in"
     ],
     "correct": 1,
-    "explain": "CSP tells the browser which code is allowed to run. It caps the blast radius — it does not replace sanitizing your input."
+    "explain": "CSP is a header telling the browser which scripts, styles and connections this page is allowed to run and make. It cannot stop you from writing an injection bug — the attacker's string still reaches the page — but it can stop that string from executing, and stop it from sending stolen data anywhere. Encrypting traffic is HTTPS's job; identifying users is authentication's job. CSP is damage control that sits behind sanitizing, never instead of it."
   },
   {
     "zone": "client",
     "tag": "05 · CSP — ALLOWLIST VS STRICT",
-    "q": "Why is an allowlist CSP (listing approved domains) a poor bet?",
+    "q": "Why is an allowlist CSP (listing approved domains in script-src) a poor bet?",
     "options": [
-      "Browsers quietly ignore allowlists",
-      "It only works over HTTP",
-      "It is hard to maintain and breaks the moment a third-party script changes something",
-      "It noticeably slows the page down"
+      "Browsers quietly ignore allowlists and only honour nonces",
+      "Allowlists only take effect over HTTP, not HTTPS",
+      "Allowing a whole domain trusts everything on it — one old library or open JSONP endpoint there defeats the policy — and the list rots every time a vendor changes a hostname",
+      "Allowlists noticeably slow the page down"
     ],
     "correct": 2,
-    "explain": "A strict CSP built on nonces or hashes holds up better, and it also blocks inline event handlers, eval(), object embeds and <base> tag hijacking."
+    "explain": "An allowlist says \"any script from this CDN is fine\". Large-scale studies of real sites found most allowlist policies bypassable, usually through a JSONP endpoint or an outdated framework already hosted on an allowed domain — and keeping the list accurate is endless work. A strict CSP trusts a per-response nonce (or a hash) that an attacker cannot guess, and 'strict-dynamic' lets your trusted scripts load their own. As a bonus it also blocks inline event handlers, eval(), object embeds and <base> tag hijacking."
   },
   {
     "zone": "client",
     "tag": "06 · CSP — ROLLOUT",
     "q": "What is the first step when rolling out a strict CSP?",
     "options": [
-      "Turn it on in production and see what breaks",
-      "Add 'unsafe-inline' so nothing breaks",
-      "Remove every third-party script",
-      "Ship it as Content-Security-Policy-Report-Only first"
+      "Enforce the strict policy in production and fix whatever breaks",
+      "Add 'unsafe-inline' first so nothing breaks, and remove it later",
+      "Remove every third-party script from the site",
+      "Ship it as Content-Security-Policy-Report-Only and collect the violation reports"
     ],
     "correct": 3,
-    "explain": "Report-Only shows what the policy would block without breaking anything. Then pick nonces or hashes, enforce for real, add strict-dynamic where scripts load scripts, and fix the inline handlers it flags."
+    "explain": "Report-Only evaluates the exact same policy and reports every violation, but blocks nothing — so you find out what would break before a single user does. Enforcing first breaks production instead. Adding 'unsafe-inline' ships a policy that does nothing against XSS, and \"remove it later\" rarely happens. Removing all third-party scripts is not a CSP step at all. Order: Report-Only → fix the inline handlers it flags and add nonces or hashes → add 'strict-dynamic' where scripts load scripts → enforce."
   },
   {
     "zone": "client",
     "tag": "07 · CSP — WHAT TO AVOID",
     "q": "Which of these should never appear in your CSP?",
     "options": [
-      "'unsafe-inline'",
-      "A per-request nonce",
-      "default-src https:",
+      "'unsafe-inline' in script-src",
+      "A nonce generated fresh for every response",
+      "default-src https: as a baseline fallback",
       "'strict-dynamic'"
     ],
     "correct": 0,
-    "explain": "'unsafe-inline', data: URIs in script-src, and wildcard sources all give the policy away. default-src https: is a reasonable fallback when a strict policy is not realistic yet."
+    "explain": "'unsafe-inline' permits any inline <script> and any on* handler — which is precisely the shape of an XSS payload, so the policy stops defending against the thing it exists for. A fresh per-response nonce and 'strict-dynamic' are the two building blocks of a strict policy, and default-src https: is weak but harmless as a baseline when a strict policy is not realistic yet. Avoid data: in script-src and wildcard sources for the same reason as 'unsafe-inline': they let attacker-supplied code qualify as allowed code."
   },
   {
     "zone": "client",
@@ -96,115 +96,115 @@
     "q": "Your JS bundle is public. Which of these counts as information leakage?",
     "options": [
       "Only hardcoded passwords",
-      "Only the source map file",
-      "Hardcoded credentials, weakly scoped API keys, and internal admin routes",
+      "Only a source map you published by accident",
+      "Hardcoded credentials, API keys with no restrictions on them, and internal or admin URLs and endpoints left in the code",
       "Nothing — the bundle is minified"
     ],
     "correct": 2,
-    "explain": "Anything reachable in shipped code is a free map handed to attackers. Grep production JS for secrets regularly, and make sure any exposed key is restricted by IP, referrer or API."
+    "explain": "Anything the browser downloads is readable by anyone who opens devtools, so it is all public by definition. Credentials are the obvious loss; an unrestricted API key is someone else's bill and someone else's data; and internal or admin endpoints are a free map of where to attack next, even if they are access-controlled. Passwords and source maps are two items on that list, not the whole list. Keep secrets on the server, restrict any key that must ship (by referrer, IP or API scope), and grep production bundles for them on a schedule."
   },
   {
     "zone": "client",
     "tag": "09 · SOURCE MAPS",
     "q": "Does minifying your JavaScript hide what is inside it?",
     "options": [
-      "Yes, minified code is unreadable",
-      "No — text and strings survive intact; only variable names shrink",
-      "Yes, as long as you also gzip it",
-      "Only when source maps are turned off"
+      "Yes — minified code is unreadable",
+      "No — your logic, strings, URLs and endpoint paths all survive intact; minifying only shortens local names and strips whitespace",
+      "Yes, as long as you gzip the bundle as well",
+      "Yes, once you turn source maps off"
     ],
     "correct": 1,
-    "explain": "Minifying is not hiding. Check whether file.js.map is sitting next to file.js in production, and decide on purpose whether maps ship publicly or go privately to a tool like Sentry."
+    "explain": "Minifying is a size optimisation, not a protection. Every string literal, URL, API path and branch of your logic is still in the file, and devtools will pretty-print it back into readable code in one click. Gzip is transport compression and changes nothing once the browser unpacks it. Turning off source maps only removes the convenience of original names and comments. Decide on purpose whether .js.map files ship publicly or get uploaded privately to a tool like Sentry — then check whether yours are already sitting next to the bundle in production."
   },
   {
     "zone": "both",
     "tag": "10 · CSRF",
     "q": "An attacker's page makes your logged-in user's browser send a real request your user never intended. What stops it?",
     "options": [
-      "A stricter CSP",
-      "A correct CORS header",
+      "A stricter Content Security Policy",
+      "A correctly configured CORS policy",
       "Minifying the bundle",
-      "CSRF tokens plus SameSite cookies"
+      "A CSRF token the attacker's page cannot read, plus SameSite cookies"
     ],
     "correct": 3,
-    "explain": "CSRF rides the session the user already has. A token proves the request came from your own page, and SameSite stops the cookie tagging along in the first place."
+    "explain": "The browser attaches your cookies to that cross-site request automatically, so the server sees a perfectly valid call from a logged-in user. A CSRF token works because the attacker's page cannot read a value out of your page to include it, and SameSite=Lax or Strict stops the cookie from riding along at all. CORS does not help here: it governs whether the attacker may read the response, but the write has already happened. CSP and minification are unrelated to this attack."
   },
   {
     "zone": "client",
     "tag": "11 · TOKEN STORAGE",
     "q": "Where should an auth token live?",
     "options": [
-      "In localStorage, so your JS can read it",
-      "In an httpOnly cookie, so JS cannot read it at all",
-      "In sessionStorage",
-      "In the URL, so it survives a refresh"
+      "In localStorage, so your JavaScript can read it and attach it to requests",
+      "In an httpOnly cookie, which JavaScript cannot read at all — paired with Secure and SameSite",
+      "In sessionStorage, since it clears when the tab closes",
+      "In the URL, so it survives a page refresh"
     ],
     "correct": 1,
-    "explain": "localStorage is readable by any script on the page, which means XSS reads it too. Cookies can be locked down with httpOnly, Secure and SameSite — localStorage has none of those."
+    "explain": "Anything your JavaScript can read, injected JavaScript can read too — one XSS and the token is exfiltrated. sessionStorage is no safer than localStorage on this point; it only shortens the window. httpOnly keeps the token out of JS entirely, Secure keeps it off plain HTTP, and SameSite covers the CSRF risk that cookies otherwise bring. Tokens in URLs are the worst case: they leak through browser history, Referer headers, server logs and anything the user copy-pastes."
   },
   {
     "zone": "both",
     "tag": "12 · CLIENT-SIDE AUTHORIZATION",
     "q": "The Delete button is hidden for users without permission. Is the action protected?",
     "options": [
-      "No — hiding a button is UI convenience; the server has to recheck",
-      "Yes — they cannot see it",
-      "Yes, as long as the route is hidden too",
-      "Yes, as long as the site is on HTTPS"
+      "No — hiding a button only changes the UI; the server has to check permission on the request itself",
+      "Yes — if they cannot see the button, they cannot trigger the action",
+      "Yes, as long as the route is hidden from the router too",
+      "Yes, as long as the site is served over HTTPS"
     ],
     "correct": 0,
-    "explain": "Client-side authorization is a convenience, not a boundary. Anyone can call the endpoint directly, so permissions get rechecked on the server every time."
+    "explain": "The button, the router and the entire bundle run on the user's machine, so all of it can be edited, and curl or Postman never loads your UI in the first place — the endpoint is one request away regardless. The only check that counts is the server-side one, for that specific user against that specific record, on every call. HTTPS protects the request in transit; it says nothing about who is allowed to make it."
   },
   {
     "zone": "server",
     "tag": "13 · CORS",
     "q": "Which CORS setup is the dangerous one?",
     "options": [
-      "A single trusted origin",
-      "Your own origin only",
-      "A wildcard * combined with credentials",
+      "Allowing one specific trusted origin",
+      "Allowing your own origin only",
+      "Reflecting back whatever Origin arrived (or using *) while also allowing credentials",
       "Blocking all cross-origin reads"
     ],
     "correct": 2,
-    "explain": "A misconfigured header lets any site read data meant only for yours. Allow only trusted origins, and never mix a wildcard with credentials."
+    "explain": "Allowing any origin together with credentials means any website your user visits can call your API as that logged-in user and read the response. Browsers reject a literal '*' when credentials are allowed, so this usually shows up as a server echoing the request's Origin header straight back — same hole, harder to spot in a config review. Allow an explicit list of origins you control. Blocking cross-origin reads is the browser's safe default, not a risk."
   },
   {
     "zone": "server",
     "tag": "14 · URL MANIPULATION",
     "q": "A user edits an ID in the URL and sees someone else's data. Where is the bug?",
     "options": [
-      "In the frontend router",
-      "In the CORS header",
-      "The ID should have been encrypted",
-      "The backend never rechecked permissions for that record"
+      "In the frontend router, for letting the ID be edited",
+      "In the CORS configuration",
+      "In using a sequential ID instead of an unguessable one",
+      "On the server — it returned the record without checking that this user is allowed to see it"
     ],
     "correct": 3,
-    "explain": "The ID came from the user, so it cannot be trusted. The server has to confirm this user is allowed to reach that specific record."
+    "explain": "This is IDOR (insecure direct object reference). Every value in a URL is attacker-controlled, so the server must answer \"is this user allowed to touch this record?\" and not only \"does this record exist?\". A random UUID just makes IDs harder to guess — the link still works for anyone who obtains one, so that is obscurity, not authorization. The router is frontend UI and CORS governs cross-origin reads; neither one ever makes a permission decision."
   },
   {
     "zone": "both",
     "tag": "15 · OPEN REDIRECTS",
     "q": "Your login page accepts any URL in ?redirect=. What is the risk?",
     "options": [
-      "It can send users straight to a phishing page",
-      "It leaks the session cookie to the parameter",
-      "It breaks CORS",
+      "Your trusted domain becomes the first hop of a phishing chain, bouncing users to a lookalike login page",
+      "The session cookie gets copied into the redirect parameter",
+      "It breaks CORS preflight requests",
       "It makes the redirect slower"
     ],
     "correct": 0,
-    "explain": "Only redirect to a trusted allowlist. Anything else turns your own login page into the first hop of a phishing chain."
+    "explain": "Users and mail filters judge the domain they can see, and that domain really is yours — the attacker's URL is hidden in the parameter, and the victim lands on a copy of your login form already trusting it. The same bug is used to steal OAuth codes when the redirect target is not pinned. Fix it by validating the target against an allowlist, or by accepting only relative paths — and reject \"//evil.com\", which looks relative but the browser reads as a protocol-relative absolute URL."
   },
   {
     "zone": "both",
     "tag": "16 · SUPPLY CHAIN",
     "q": "Most of a modern frontend is code you did not write. How does risk get in?",
     "options": [
-      "Only through packages you installed directly",
-      "Compromised packages, typosquatted names, and transitive dependencies you never chose",
-      "Only through dev dependencies",
-      "It does not — the registry reviews everything"
+      "Only through packages you chose and installed yourself",
+      "Through hijacked or compromised packages, typosquatted names, and transitive dependencies you never chose to install",
+      "Only through devDependencies, which never ship to users",
+      "It does not — the registry reviews every package before publishing"
     ],
     "correct": 1,
-    "explain": "Dependency code runs with exactly the same trust as your own. Pin versions, use lockfiles, scan in CI, and keep the dependency list as small as the task allows."
+    "explain": "npm publishes whatever is uploaded; nobody reviews it on your behalf. Most of your dependency tree consists of packages you never picked, pulled in by the ones you did, and a single maintainer-account takeover turns a trusted name malicious in one version. devDependencies are not safe either — they execute on developer machines and in CI, which is where the deploy tokens live. Pin with a committed lockfile, install with npm ci, run audit or a scanner in CI, and keep the tree as small as the job allows."
   }
 ]

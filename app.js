@@ -3,7 +3,7 @@
 let QUESTIONS = [];
 
 
-const ROUND_SECONDS = 20;
+const ROUND_SECONDS = 60;
 const LETTERS = ['A','B','C','D'];
 const API = '/api/room';
 const POLL_MS = 1000;
@@ -17,7 +17,8 @@ let players = [];             // [{id, ...}]
 let me = null;                // my player record
 let pid = null;               // my player id
 let quizKey = '';             // question currently built into the DOM
-let myChoice = null;          // my answer for the current question (-1 = timed out)
+let myChoice = null;          // my submitted answer for the current question (-1 = timed out)
+let pending = null;           // option I have tapped but not submitted yet
 let writing = false;          // one answer write at a time
 let clockSkew = 0;            // server clock minus this device's clock
 
@@ -35,7 +36,7 @@ function showScreen(id){
 function serverNow(){ return Date.now() + clockSkew; }
 
 // Answering never reveals anything — the whole room flips together, either when
-// the host hits Reveal or when the 20s clock runs out for everyone.
+// the host hits Reveal or when the 60s clock runs out for everyone.
 function roundRevealed(){
   if(!S) return false;
   if(S.revealed || S.phase === 'results') return true;
@@ -153,6 +154,7 @@ function renderQuiz(){
   if(quizKey !== key){
     quizKey = key;
     myChoice = myAnswerFor(S.index);
+    pending = null;
     buildQuestion(q);
   }
   paintQuiz(q);
@@ -169,7 +171,7 @@ function buildQuestion(q){
     const btn = document.createElement('button');
     btn.className = 'opt';
     btn.innerHTML = `<span class="k">${LETTERS[i]}</span><span>${escapeHtml(opt)}</span>`;
-    btn.addEventListener('click', ()=>answer(i));
+    btn.addEventListener('click', ()=>{ pending = i; paintQuiz(q); });
     wrap.appendChild(btn);
   });
 }
@@ -184,17 +186,27 @@ function paintQuiz(q){
   $('streakPill').hidden = streak < 2;
   $('streakVal').textContent = streak;
 
+  // Submitting reveals the answer to you alone — the rest of the room plays on
+  // until the host reveals or the clock runs out for everyone.
+  const showAnswer = reveal || answered;
+  const locked = !live || answered || reveal;
+
   Array.from(document.querySelectorAll('.opt')).forEach((b,i)=>{
-    b.disabled = !live || answered || reveal;
-    b.classList.toggle('picked', !reveal && i === myChoice);
-    b.classList.toggle('correct', reveal && i === q.correct);
-    b.classList.toggle('wrong', reveal && i === myChoice && myChoice !== q.correct);
-    b.classList.toggle('dim', reveal && i !== q.correct && i !== myChoice);
+    b.disabled = locked;
+    b.classList.toggle('picked', !showAnswer && i === pending);
+    b.classList.toggle('correct', showAnswer && i === q.correct);
+    b.classList.toggle('wrong', showAnswer && i === myChoice && myChoice !== q.correct);
+    b.classList.toggle('dim', showAnswer && i !== q.correct && i !== myChoice);
   });
 
+  const sub = $('submitBtn');
+  sub.hidden = locked;
+  sub.disabled = pending === null;
+  sub.textContent = pending === null ? 'Pick an option' : 'Lock in ' + LETTERS[pending];
+
   const fb = $('feedback');
-  fb.classList.toggle('show', reveal);
-  if(reveal){
+  fb.classList.toggle('show', showAnswer);
+  if(showAnswer){
     const v = $('verdict');
     if(myChoice === -1 || myChoice === null){ v.textContent = 'Time’s up.'; v.className = 'verdict bad'; }
     else if(myChoice === q.correct){ v.textContent = 'Patched.'; v.className = 'verdict good'; }
@@ -206,7 +218,7 @@ function paintQuiz(q){
   sb.hidden = false;
   if(!live){ sb.textContent = 'Waiting for the host to start this round…'; sb.className = 'standby live'; }
   else if(reveal){ sb.textContent = 'Round over. Waiting for the host to move on…'; sb.className = 'standby'; }
-  else if(answered){ sb.textContent = 'Locked in. Waiting for the rest of the room…'; sb.className = 'standby live'; }
+  else if(answered){ sb.textContent = 'Locked in — the answer is below. Waiting for the rest of the room…'; sb.className = 'standby live'; }
   else { sb.hidden = true; }
 }
 
@@ -225,7 +237,8 @@ function tick(){
   }
   if(!me || S.phase !== 'question') return;
   setBar(live ? remaining/ROUND_SECONDS : 1, live ? Math.max(0, Math.ceil(remaining)) + 's' : String(ROUND_SECONDS) + 's');
-  if(live && remaining <= 0 && (myChoice === null || myChoice === undefined)) answer(-1);
+  // Out of time: whatever is selected gets submitted, -1 if nothing is.
+  if(live && remaining <= 0 && (myChoice === null || myChoice === undefined)) answer(pending === null ? -1 : pending);
 }
 
 async function answer(choice){
@@ -289,6 +302,8 @@ function renderEnd(){
   $('statStreak').textContent = me.bestStreak || 0;
   $('lbList').innerHTML = leaderboardHtml(pid);
 }
+
+$('submitBtn').addEventListener('click', ()=>{ if(pending !== null) answer(pending); });
 
 /* ---------- join ---------- */
 $('joinHereBtn').addEventListener('click', ()=>{ showScreen('screen-join'); $('nameInput').focus(); });

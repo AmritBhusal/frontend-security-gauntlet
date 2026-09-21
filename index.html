@@ -21,7 +21,7 @@
       <p>Scan to join the room. The host runs the clock &mdash; questions appear on your device when the round starts.</p>
       <div class="meta-row">
         <span><b id="qrRounds">14</b> rounds</span>
-        <span><b>20s</b> per round</span>
+        <span><b>60s</b> per round</span>
         <span><b id="qrPlayers">0</b> joined</span>
       </div>
       <div class="qr-box" id="qrBox"></div>
@@ -64,7 +64,7 @@
       <div class="hud">
         <div class="hud-left" id="roundLabel">ROUND 01 / 14</div>
         <div class="hud-right">
-          <span class="pill clock" id="clockPill">20s</span>
+          <span class="pill clock" id="clockPill">60s</span>
           <span class="pill streak" id="streakPill" hidden>🔥 <span id="streakVal">0</span></span>
           <span class="pill score">⬥ <span id="scoreVal">0</span></span>
         </div>
@@ -75,6 +75,7 @@
       <div class="q-title" id="qTitle"></div>
       <div id="qCodeWrap"></div>
       <div class="options" id="optionsWrap"></div>
+      <button class="btn-primary" id="submitBtn" hidden>Lock in answer</button>
 
       <div class="feedback" id="feedback">
         <div class="verdict" id="verdict"></div>
